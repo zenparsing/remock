@@ -2,5 +2,8 @@
   "name": "remock",
   "version": "0.0.1",
   "description": "Module mocking for unit testing",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "blue-tape": "^0.2.0"
+  }
 }
