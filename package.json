@@ -1,0 +1,6 @@
+{
+  "name": "remock",
+  "version": "0.0.1",
+  "description": "Module mocking for unit testing",
+  "license": "MIT"
+}
