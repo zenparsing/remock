@@ -2,7 +2,35 @@
 
 let Module = require('module');
 
+const SPECIAL_KEYS = ['objects'];
+
 module.exports = remock;
+
+function mockObject(obj) {
+  let prevs = Object.create(null);
+  Object.getOwnPropertyNames(obj).forEach(key => {
+    prevs[key] = Object.getOwnPropertyDescriptor(obj, key);
+  });
+
+  return function restore() {
+    Object.getOwnPropertyNames(obj).forEach(key => {
+      let prev = prevs[key];
+      if (!prev) {
+        // Remove props that have been added
+        delete obj[key];
+      } else {
+        // Restore props that have been mutated
+        let desc = Object.getOwnPropertyDescriptor(obj, key);
+        Object.keys(desc).some(field => {
+          if (desc[field] !== prev[field]) {
+            Object.defineProperty(obj, key, prev);
+            return true;
+          }
+        });
+      }
+    });
+  };
+}
 
 function remock(require) {
 
@@ -17,40 +45,20 @@ function remock(require) {
     // Remove everything from the cache
     Object.keys(require.cache).forEach(key => delete require.cache[key]);
 
-    // Copy out enumerable global vars
-    let globals = Object.create(null);
-    Object.keys(global).forEach(key => {
-      globals[key] = Object.getOwnPropertyDescriptor(global, key);
-    });
-
     return function restore() {
       // Remove everything that has been cached as a result of 'fn'
       Object.keys(require.cache).forEach(key => delete require.cache[key]);
 
       // Restore cache to the previous state
       Object.assign(require.cache, cache);
-
-      Object.keys(global).forEach(key => {
-        let prev = globals[key];
-        if (!prev) {
-          // Remove enumerable global vars that have been added
-          delete global[key];
-        } else {
-          // Restore enumerable global vars that have been mutated
-          let desc = Object.getOwnPropertyDescriptor(global, key);
-          Object.keys(desc).some(field => {
-            if (desc[field] !== prev[field]) {
-              Object.defineProperty(global, key, prev);
-              return true;
-            }
-          });
-        }
-      });
     };
   }
 
   function populateCache(mocks) {
     Object.keys(mocks).forEach(id => {
+      if (SPECIAL_KEYS.indexOf(id) >= 0)
+        return;
+
       let path = require.resolve(id);
       let entry = new Module(path);
       entry.exports = mocks[id];
@@ -73,7 +81,22 @@ function remock(require) {
       if (mocks && typeof mocks !== 'object')
         throw new TypeError('Invalid mock object provided to remock');
 
-      restore = clearCache();
+      let restoreCache = clearCache();
+      let objectRestores = [];
+
+      if (mocks && mocks.objects) {
+        if (!Array.isArray(mocks.objects))
+          throw new TypeError('"objects" key must be an array');
+
+        objectRestores = mocks.objects.map(mockObject);
+      }
+
+      objectRestores.push(mockObject(global));
+
+      restore = () => {
+        restoreCache();
+        objectRestores.forEach(x => x());
+      };
 
       if (mocks)
         populateCache(mocks);
@@ -81,19 +104,13 @@ function remock(require) {
       resolve();
 
     }).then(() => {
-
       return fn();
-
     }).then(x => {
-
       restore();
       return x;
-
     }, err => {
-
       if (restore) restore();
       throw err;
-
     });
   }
 
