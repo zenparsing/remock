@@ -2,7 +2,7 @@
 
 let Module = require('module');
 
-const SPECIAL_KEYS = ['objects'];
+const SPECIAL_KEYS = ['globalVars'];
 
 module.exports = remock;
 
@@ -81,37 +81,38 @@ function remock(require) {
       if (mocks && typeof mocks !== 'object')
         throw new TypeError('Invalid mock object provided to remock');
 
+      // Clear the entire module cache
       let restoreCache = clearCache();
       let objectRestores = [];
 
-      if (mocks && mocks.objects) {
-        if (!Array.isArray(mocks.objects))
-          throw new TypeError('"objects" key must be an array');
+      // Snapshot any objects in "globalVars"
+      if (mocks && mocks.globalVars) {
+        if (!Array.isArray(mocks.globalVars))
+          throw new TypeError('"globalVars" key must be an array');
 
-        objectRestores = mocks.objects.map(mockObject);
+        objectRestores = mocks.globalVars.map(mockObject);
       }
 
+      // Always snapshot the global object
       objectRestores.push(mockObject(global));
 
+      // On completion, restore the module cache and object snapshots
       restore = () => {
         restoreCache();
         objectRestores.forEach(x => x());
       };
 
+      // Populate the module cache with mocks
       if (mocks)
         populateCache(mocks);
 
       resolve();
-
-    }).then(() => {
-      return fn();
-    }).then(x => {
-      restore();
-      return x;
-    }, err => {
-      if (restore) restore();
-      throw err;
-    });
+    })
+    .then(() => fn())
+    .then(
+      x => { restore(); return x; },
+      err => { restore && restore(); throw err; }
+    );
   }
 
   return mockModules;
