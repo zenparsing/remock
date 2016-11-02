@@ -33,7 +33,6 @@ function mockObject(obj) {
 }
 
 function remock(require) {
-
   if (typeof require !== 'function') {
     throw new TypeError('A require function must be provided to remock');
   }
