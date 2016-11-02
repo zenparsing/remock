@@ -38,7 +38,7 @@ test('Package entry point', async t => {
 
 test('Argument validation', async t => {
   let mock = remock(fakeRequire());
-  t.equals(mock().constructor, Promise, 'returns a promise');
+  t.equals(mock(() => {}).constructor, Promise, 'returns a promise');
 
   await rejects(t, mock(), TypeError, 'rejects if called without arguments');
   await rejects(t, mock(123), TypeError, 'rejects if called without a callback');
