@@ -121,7 +121,7 @@ function remock(require) {
         throw new TypeError('Invalid callback function supplied to remock');
 
       start(mocks);
-      fn();
+      return fn();
     }).then(
       x => { stop(); return x; },
       err => { stop(); throw err; }
