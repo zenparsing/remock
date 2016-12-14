@@ -56,6 +56,16 @@ test('Module cache', async t => {
   t.deepEqual(fake.cache, {}, 'cache is restored to empty if previously empty');
 });
 
+test('Start and stop', async t => {
+  let fake = fakeRequire();
+  let mock = remock(fake);
+
+  mock.start();
+  fake.cache.hendrix = 'jimi';
+  mock.stop();
+  t.deepEqual(fake.cache, {}, 'cache is restored to empty if previously empty');
+});
+
 test('Global snapshot', async t => {
   let mock = remock(fakeRequire());
 

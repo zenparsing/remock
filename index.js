@@ -65,10 +65,53 @@ function remock(require) {
     });
   }
 
-  function mockModules(mocks, fn) {
-    let restore;
+  let restore;
 
-    return new Promise(resolve => {
+  function start(mocks) {
+    if (mocks && typeof mocks !== 'object')
+      throw new TypeError('Invalid mock object provided to remock');
+
+    if (restore)
+      throw new Error('Mocking current active');
+
+    // Clear the entire module cache
+    let restoreCache = clearCache();
+    let objectRestores = [];
+
+    // Snapshot any objects in "globalVars"
+    if (mocks && mocks.globalVars) {
+      if (!Array.isArray(mocks.globalVars))
+        throw new TypeError('"globalVars" key must be an array');
+
+      objectRestores = mocks.globalVars.map(mockObject);
+    }
+
+    // Always snapshot the global object
+    objectRestores.push(mockObject(global));
+
+    // On completion, restore the module cache and object snapshots
+    restore = () => {
+      restoreCache();
+      objectRestores.forEach(x => x());
+    };
+
+    // Populate the module cache with mocks
+    if (mocks)
+      populateCache(mocks);
+  }
+
+  function stop() {
+    if (restore) {
+      try {
+        restore();
+      } finally {
+        restore = null;
+      }
+    }
+  }
+
+  function runMocks(mocks, fn) {
+    return Promise.resolve().then(() => {
       if (!fn) {
         fn = mocks;
         mocks = null;
@@ -77,42 +120,16 @@ function remock(require) {
       if (typeof fn !== 'function')
         throw new TypeError('Invalid callback function supplied to remock');
 
-      if (mocks && typeof mocks !== 'object')
-        throw new TypeError('Invalid mock object provided to remock');
-
-      // Clear the entire module cache
-      let restoreCache = clearCache();
-      let objectRestores = [];
-
-      // Snapshot any objects in "globalVars"
-      if (mocks && mocks.globalVars) {
-        if (!Array.isArray(mocks.globalVars))
-          throw new TypeError('"globalVars" key must be an array');
-
-        objectRestores = mocks.globalVars.map(mockObject);
-      }
-
-      // Always snapshot the global object
-      objectRestores.push(mockObject(global));
-
-      // On completion, restore the module cache and object snapshots
-      restore = () => {
-        restoreCache();
-        objectRestores.forEach(x => x());
-      };
-
-      // Populate the module cache with mocks
-      if (mocks)
-        populateCache(mocks);
-
-      resolve();
-    })
-    .then(() => fn())
-    .then(
-      x => { restore(); return x; },
-      err => { restore && restore(); throw err; }
+      start(mocks);
+      fn();
+    }).then(
+      x => { stop(); return x; },
+      err => { stop(); throw err; }
     );
   }
 
-  return mockModules;
+  runMocks.start = start;
+  runMocks.stop = stop;
+
+  return runMocks;
 }
