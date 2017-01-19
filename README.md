@@ -21,7 +21,6 @@ Also, I wanted to work within these constraints:
 - The library should be more than async-friendly, it should be async-first.
 - The library should be dead simple; it shouldn't introduce its own vocabulary.
 - The library should only use public Node APIs and involve no stack-trace hackery.
-- Libraries are better than frameworks.
 
 I tried several different solutions and but wasn't happy with any of them.
 
@@ -78,6 +77,14 @@ Returns a mocking function which uses the `require` argument to resolve module n
 Mocks the module system using the provided `mockSpec` object and executes `callback`. The callback argument may return a promise. When that promise is resolved or rejected, the module system and global object are restored to their pre-mock state.
 
 Returns a promise for the completion value of `callback`.
+
+### `mock.start([mockSpec])`
+
+Instead of providing a callback to `mock`, you can instead call `mock.start`. This is useful when you want to start mocking from a test-framework hook, like `before`.
+
+### `mock.stop()`
+
+If you used `mock.start` at the beginning of your test, you'll want to call `mock.stop` when you are all done. This can be called from a test-framework hook like `after`.
 
 ### Mock Specifications
 
