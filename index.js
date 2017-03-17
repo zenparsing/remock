@@ -76,18 +76,24 @@ function remock(require) {
 
     // Clear the entire module cache
     let restoreCache = clearCache();
-    let objectRestores = [];
+    let objectSet = new Set();
 
     // Snapshot any objects in "globalVars"
     if (mocks && mocks.globalVars) {
       if (!Array.isArray(mocks.globalVars))
         throw new TypeError('"globalVars" key must be an array');
 
-      objectRestores = mocks.globalVars.map(mockObject);
+      mocks.globalVars.forEach(obj => objectSet.add(obj));
     }
 
     // Always snapshot the global object
-    objectRestores.push(mockObject(global));
+    objectSet.add(global);
+
+    // Always snapshot Date and Date.prototype
+    objectSet.add(Date);
+    objectSet.add(Date.prototype);
+
+    let objectRestores = Array.from(objectSet).map(mockObject);
 
     // On completion, restore the module cache and object snapshots
     restore = () => {

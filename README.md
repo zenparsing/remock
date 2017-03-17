@@ -54,7 +54,6 @@ test('Testing 1, 2, 3', () => {
 
   return mock({
     request: (url, callback) => { /* Mock */ },
-    globalVars: [Date],
   }, () => {
     Date.now = function() { return 1; };
     let comments = require('../src/comments');
@@ -103,10 +102,9 @@ mock({
   pkg: function() {
     return 'pkg mock';
   },
-  globalVars: [Date],
 }, () => {
-  // Mock `Date.now`. Since Date appears in the globalVars array, it will
-  // be restored after this callback has completed.
+  // Mock `Date.now`. Properties of the Date object will be restored after
+  // this callback has completed.
   Date.now = () => 1;
 
   assert.equals(require('./local-module').fn(), 'local-module mock');
@@ -116,4 +114,7 @@ mock({
 
 Keys with special semantics:
 
-- `globalVars`: An array of objects which will be restored to their pre-mock state when the promise returned by the callback has been resolved or rejected.
+- `globalVars`: An array of objects which will be restored to their pre-mock state when the promise returned by the callback has been resolved or rejected. The following global objects are always implicitly restored:
+  - `global`
+  - `Date`
+  - `Date.prototype`

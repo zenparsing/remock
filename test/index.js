@@ -77,6 +77,19 @@ test('Global snapshot', async t => {
   t.equals(global.woop, 'woop', 'mutated global vars are restored');
 });
 
+test('Date snapshot', async t => {
+  let mock = remock(fakeRequire());
+
+  let now = Date.now;
+  let toISOString = Date.prototype.toISOString;
+  await mock(() => {
+    Date.now = () => 1;
+    Date.prototype.toISOString = () => 'abc';
+  });
+  t.equals(Date.now, now, 'Date properties are restored');
+  t.equals(Date.prototype.toISOString, toISOString, 'Date prototype properties are restored');
+});
+
 test('Object snapshots', async t => {
   let mock = remock(fakeRequire());
   let obj = {
